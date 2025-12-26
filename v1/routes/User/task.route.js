@@ -12,6 +12,8 @@ route.get("/detail/:id", controller.detail);
 
 route.patch("/change-multi", controller.changeMulti);
 
+route.patch("/change-status/:id", controller.changeStatus);
+
 route.post(
   "/create",
   upload.single("thumbnail"),
