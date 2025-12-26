@@ -225,7 +225,7 @@ module.exports.detail = async (req, res) => {
 module.exports.listuser = async (req, res) => {
   const users = await User.find({
     deleted: false,
-  }).select("fullName email");
+  }).select("-password -token");
   res.json({
     code: 200,
     message: "Thành công",

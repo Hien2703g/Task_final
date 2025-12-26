@@ -83,7 +83,7 @@ module.exports.index = async (req, res) => {
     $or: [
       { manager: req.user.id },
       { createdBy: req.user.id },
-      { listUser: req.user.id },
+      // { listUser: req.user.id },
     ],
     deleted: false,
   };
