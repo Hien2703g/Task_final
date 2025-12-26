@@ -3,72 +3,28 @@ const generate = require("../helpers/generate");
 
 const accountSchema = new mongoose.Schema(
   {
-    fullName: {
-      type: String,
-      trim: true,
-      maxlength: 100,
-    },
-
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true,
-    },
-
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-      // select: false,
-    },
-
+    fullName: String,
+    email: String,
+    password: String,
     token: {
       type: String,
-      default: () => generate.generateRandomString(32),
-      index: true,
+      default: generate.generateRandomString(20),
     },
-
-    phone: {
-      type: String,
-      trim: true,
-    },
-
-    avatar: {
-      type: String,
-      default: null,
-    },
-
-    role_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Role",
-      index: true,
-    },
-
-    status: {
-      type: String,
-      enum: ["active", "inactive", "blocked"],
-      default: "active",
-      index: true,
-    },
-    deletedBy: String,
+    phone: String,
+    avatar: String,
+    role_id: String,
+    status: String,
     deleted: {
       type: Boolean,
       default: false,
-      index: true,
     },
-
-    deletedAt: {
-      type: Date,
-      default: null,
-    },
+    deletedAt: Date,
   },
   {
     timestamps: true,
-    versionKey: false,
   }
 );
 
-module.exports = mongoose.model("Account", accountSchema, "accounts");
+const Account = mongoose.model("Account", accountSchema, "accounts");
+
+module.exports = Account;

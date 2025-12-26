@@ -295,25 +295,23 @@ module.exports.isActive = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy team" });
     }
     if (
-      team.leader.toString() !== req.user._id.toString() ||
+      team.leader.toString() !== req.user._id.toString() &&
       team.manager.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({
         message: "Bạn không có quyền cập nhật team",
       });
     }
-    if (team.leader.toString() == req.user._id.toString()) {
-      await Team.updateOne(
-        { _id: team._id },
-        {
-          isActive: isActive,
-        }
-      );
-      res.json({
-        code: 200,
-        message: `Cập nhật trạng thái ${isActive} của  team thành công`,
-      });
-    }
+    await Team.updateOne(
+      { _id: team._id },
+      {
+        isActive: isActive,
+      }
+    );
+    res.json({
+      code: 200,
+      message: `Cập nhật trạng thái ${isActive} của  team thành công`,
+    });
   } catch (error) {
     console.error(" LỖI KHI XOÁ Teams:", error);
     return res.status(500).json({

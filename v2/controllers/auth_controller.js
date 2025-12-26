@@ -20,8 +20,8 @@ module.exports.loginPost = async (req, res) => {
   // console.log(req.body);
   const email = req.body.email;
   const password = req.body.password;
-  // console.log(req.body.email);
-  // console.log(req.body.password);
+  console.log(req.body.email);
+  console.log(req.body.password);
   const user = await Account.findOne({
     email: email,
     deleted: false,

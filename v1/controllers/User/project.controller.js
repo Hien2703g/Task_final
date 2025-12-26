@@ -8,9 +8,9 @@ const Team = require("../../../models/team.model");
 module.exports.getTasksByParent = async (req, res) => {
   try {
     const parentId = req.params.parentId;
-    console.log("=== USER GET TASKS BY PARENT ===");
-    console.log("Parent ID:", parentId);
-    console.log("User ID:", req.user?.id);
+    // console.log("=== USER GET TASKS BY PARENT ===");
+    // console.log("Parent ID:", parentId);
+    // console.log("User ID:", req.user?.id);
 
     // Kiểm tra user có quyền xem tasks của project này không
     const parentProject = await Project.findOne({

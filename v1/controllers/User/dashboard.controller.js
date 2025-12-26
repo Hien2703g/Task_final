@@ -5,45 +5,82 @@ module.exports.getDashboard = async (req, res) => {
   try {
     const userId = req.user._id; // lấy từ middleware auth
 
+    // Tổng số task
+    const totalTasks = await Task.countDocuments({
+      deleted: false,
+      createdBy: userId,
+    });
+    // Task pending
+    const pendingTasks = await Task.countDocuments({
+      status: "todo",
+      deleted: false,
+      createdBy: userId,
+    });
+    //Task in-progress
+    const inProgressTasks = await Task.countDocuments({
+      status: "in-progress",
+      deleted: false,
+      createdBy: userId,
+    });
+    // Task hoàn thành
+    const doneTasks = await Task.countDocuments({
+      status: "done",
+      deleted: false,
+      createdBy: userId,
+    });
+    //Task backlog
+    const backlogTasks = await Task.countDocuments({
+      status: "backlog",
+      deleted: false,
+      createdBy: userId,
+    });
+
+    // Productivity %
+    const productivity =
+      totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+
+    const chartData = {
+      todo: pendingTasks,
+      "in-progress": inProgressTasks,
+      done: doneTasks,
+      backlog: backlogTasks,
+    };
+
     //Project.
-    // Tổng số Project
+    const totalTeamTasks = await Project.countDocuments({
+      deleted: false,
+      projectParentId: { $exists: true, $ne: null },
+      assignee_id: { $exists: true, $ne: null, $ne: "" }, // Phải có assignee
+      $or: [
+        { assignee_id: userId },
+        { listUser: userId.toString() },
+        { createdBy: userId },
+      ],
+    });
     // Tổng số Project
     const totalProjects = await Project.countDocuments({
       deleted: false,
-      //   projectParentId: { $exists: false },
-      $or: [{ createdBy: userId }, { listUser: userId.toString() }],
-    });
-    // Tổng số PM
-    const totalPM = await Project.countDocuments({
-      deleted: false,
       projectParentId: { $exists: false },
-      createdBy: userId,
+      $or: [{ createdBy: userId }, { listUser: userId }],
     });
-    const PM = await Project.find({
-      deleted: false,
-      //   projectParentId: { $exists: false },
-      createdBy: userId,
-    });
-    console.log(PM);
     // Projects pending
     const pendingProjetcs = await Project.countDocuments({
       status: "not-started",
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
       $or: [{ createdBy: userId }, { listUser: userId }],
     });
-    console.log(pendingProjetcs);
     // project của team (task assign cho user hiện tại)
     const teamProjects = await Project.countDocuments({
-      listUser: userId.toString(),
+      listUser: userId,
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
     });
     // Project hoàn thành
     const doneProjects = await Project.countDocuments({
       status: "completed",
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
       $or: [{ createdBy: userId }, { listUser: userId }],
     });
     // Productivity %
@@ -55,35 +92,35 @@ module.exports.getDashboard = async (req, res) => {
     const notStartedProjects = await Project.countDocuments({
       status: "not-started",
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
       $or: [{ createdBy: userId }, { listUser: userId }],
     });
 
     const inProgressProjects = await Project.countDocuments({
       status: "in-progress",
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
       $or: [{ createdBy: userId }, { listUser: userId }],
     });
 
     const onHoldProjects = await Project.countDocuments({
       status: "on-hold",
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
       $or: [{ createdBy: userId }, { listUser: userId }],
     });
 
     const completedProjects = await Project.countDocuments({
       status: "completed",
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
       $or: [{ createdBy: userId }, { listUser: userId }],
     });
 
     const cancelledProjects = await Project.countDocuments({
       status: "cancelled",
       deleted: false,
-      //   projectParentId: { $exists: false },
+      projectParentId: { $exists: false },
       $or: [{ createdBy: userId }, { listUser: userId }],
     });
 
@@ -96,13 +133,18 @@ module.exports.getDashboard = async (req, res) => {
       cancelled: cancelledProjects,
     };
 
-    console.log("Projects distribution:", chartData2);
     // End Project
     return res.status(200).json({
       code: 200,
+      tasks: {
+        totalTasks: totalTasks,
+        pendingTasks: pendingTasks,
+        teamTasks: totalTeamTasks,
+        productivity: productivity,
+        chartData: chartData,
+      },
       projects: {
         totalProjects,
-        totalPM,
         pendingProjetcs,
         teamProjects,
         productivityProject,
