@@ -3,7 +3,7 @@ const Poster = require("../../../models/article.model");
 module.exports.index = async (req, res) => {
   try {
     // Lấy 1 bài post có position cao nhất (poster)
-    const poster = await Article.findOne({ deleted: false })
+    const poster = await Poster.findOne({ deleted: false })
       .sort({ position: -1 })
       .lean();
 

@@ -6,7 +6,7 @@ const Notification = require("../../../models/notification.model");
 //[GET]/api/v1/tasks
 module.exports.index = async (req, res) => {
   try {
-    console.log("Tasks index query:", req.query);
+    // console.log("Tasks index query:", req.query);
     const find = {
       deleted: false,
       createdBy: req.user.id,
@@ -47,7 +47,7 @@ module.exports.index = async (req, res) => {
     if (req.query.forBoard === "true") {
       const allTasks = await Task.find(find)
         .sort(sort)
-        .limit(200)
+        .limit(initPagination.limitItem)
         .skip(objectPagination.skip);
 
       return res.json({
@@ -177,14 +177,35 @@ module.exports.changeMulti = async (req, res) => {
 //[POST]/api/v1/tasks/create
 module.exports.create = async (req, res) => {
   try {
+    const userId = req.user.id;
     console.log(req.user.id);
-    req.body.createdBy = req.user.id;
+    req.body.createdBy = userId;
+    // 1. Validate required fields
+    const { title } = req.body;
+    if (!title) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu thông tin bắt buộc",
+      });
+    }
     const task = new Task(req.body);
     const data = await task.save();
+    // console.log(task);
+    const notification = await Notification.create({
+      user_id: userId,
+      sender: userId,
+      type: "CREATE_TASK",
+      title: "Bạn được giao một task mới",
+      message: `Task: ${data.title}`,
+      url: `/tasks/detail/${data._id}`,
+      priority: data.priority,
+    });
+    console.log(notification);
     res.json({
       code: 200,
       message: "success",
       data: data,
+      // notification: notification,
     });
   } catch (error) {
     res.json({

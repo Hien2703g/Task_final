@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const notificationSchema = new mongoose.Schema(
   {
-    user: {
+    user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -27,13 +27,8 @@ const notificationSchema = new mongoose.Schema(
       maxlength: 1000,
     },
 
-    type: {
-      type: String,
-      enum: ["SYSTEM", "COMMENT", "CHAT", "PROJECT", "TASK"],
-      required: true,
-      index: true,
-    },
-
+    type: String,
+    priority: String,
     url: {
       type: String,
       default: null,
