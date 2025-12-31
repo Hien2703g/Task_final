@@ -1,40 +1,34 @@
 const User = require("../../../models/user.model");
+
 module.exports.requireAuth = async (req, res, next) => {
-  // if (!req.cookies.token) {
-  //   res.redirect(`/user/login`);
-  //   return;
-  // }
+  try {
+    const token = req.cookies.tokenUser;
 
-  // const user = await User.findOne({
-  //   token: req.cookies.token,
-  // }).select("-password");
-
-  // if (!user) {
-  //   res.redirect(`api/v1/user/login`);
-  //   return;
-  // }
-  // req.user = user;
-  // next();
-  if (req.headers.authorization) {
-    const token = req.headers.authorization.split(" ")[1];
-    // console.log(token);
-    const user = await User.findOne({
-      token: token,
-      deleted: false,
-    }).select("-password -token");
-    if (!user) {
-      res.json({
-        code: 400,
-        message: "Tai khoan khong hop le!!",
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
       });
-      return;
     }
+
+    const user = await User.findOne({ tokenUser: token }).select("-password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token",
+      });
+    }
+
+    // Attach user to request for later use
     req.user = user;
+
     next();
-  } else {
-    res.json({
-      code: 400,
-      mesage: "Vui long gui kem token",
+  } catch (error) {
+    console.error("Auth error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
     });
   }
 };

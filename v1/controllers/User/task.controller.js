@@ -7,6 +7,7 @@ const Notification = require("../../../models/notification.model");
 module.exports.index = async (req, res) => {
   try {
     // console.log("Tasks index query:", req.query);
+    // console.log("locals:", res.locals);
     const find = {
       deleted: false,
       createdBy: req.user.id,
@@ -21,7 +22,7 @@ module.exports.index = async (req, res) => {
     const keyword = (req.query.keyword || req.query.search || "")
       .toString()
       .trim();
-    console.log("Search keyword received:", keyword);
+    // console.log("Search keyword received:", keyword);
     if (keyword) {
       const regex = new RegExp(keyword, "i");
       find.$or = [{ title: regex }, { content: regex }];

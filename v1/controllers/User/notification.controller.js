@@ -20,7 +20,7 @@ module.exports.index = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limitItem);
-    console.log(notifications);
+    // console.log(notifications);
     res.json({
       code: 200,
       success: true,
