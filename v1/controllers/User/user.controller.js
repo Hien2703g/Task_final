@@ -60,13 +60,6 @@ module.exports.login = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "Lax", // localhost
-      secure: false, // true khi HTTPS
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-
     res.json({
       message: "Đăng nhập thành công",
       user: {
@@ -74,6 +67,7 @@ module.exports.login = async (req, res) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        token: token,
       },
     });
   } catch (err) {
