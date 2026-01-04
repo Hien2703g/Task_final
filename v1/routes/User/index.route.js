@@ -21,11 +21,11 @@ module.exports = (app) => {
 
   app.use(version + "/poster", authMiddleware.requireAuth, postRoute);
 
-  // app.use(
-  //   version + "/notifications",
-  //   // authMiddleware.requireAuth,
-  //   notificationRoute
-  // );
+  app.use(
+    version + "/notifications",
+    authMiddleware.requireAuth,
+    notificationRoute
+  );
 
   app.use(version + "/dashboard", authMiddleware.requireAuth, dashboardRoute);
 

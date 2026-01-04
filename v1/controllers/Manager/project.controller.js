@@ -4,6 +4,7 @@ const PagitationHelper = require("../../../helpers/pagitation");
 const SearchHelper = require("../../../helpers/search");
 const User = require("../../../models/user.model");
 const Team = require("../../../models/team.model");
+const { updateOverdueProjetcs } = require("../../../helpers/updateOverdue");
 const mongoose = require("mongoose");
 //[GET]/api/v3/projects/:parentId/
 module.exports.getTasksByParent = async (req, res) => {
@@ -79,6 +80,7 @@ module.exports.getTasksByParent = async (req, res) => {
 
 //[GET]/api/v3/projects
 module.exports.index = async (req, res) => {
+  await updateOverdueProjetcs();
   const find = {
     $or: [
       { manager: req.user.id },

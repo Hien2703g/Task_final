@@ -2,10 +2,12 @@ const Task = require("../../../models/task.model");
 const PagitationHelper = require("../../../helpers/pagitation");
 const SearchHelper = require("../../../helpers/search");
 const Notification = require("../../../models/notification.model");
+const { updateOverdueTasks } = require("../../../helpers/updateOverdue");
 
 //[GET]/api/v1/tasks
 module.exports.index = async (req, res) => {
   try {
+    await updateOverdueTasks();
     // console.log("Tasks index query:", req.query);
     // console.log("locals:", res.locals);
     const find = {
@@ -220,14 +222,14 @@ module.exports.create = async (req, res) => {
 module.exports.edit = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log("Update task with ID:", id);
-    console.log("Update data:", req.body);
+    // console.log("Update task with ID:", id);
+    // console.log("Update data:", req.body);
 
     const result = await Task.updateOne(
       { _id: id, createdBy: req.user.id },
       req.body
     );
-    console.log("Update result:", result);
+    // console.log("Update result:", result);
 
     if (result.matchedCount === 0) {
       res.json({
@@ -373,7 +375,7 @@ module.exports.changePriority = async (req, res) => {
         priority: priority,
       }
     );
-    console.log("Change priority result:", result);
+    // console.log("Change priority result:", result);
 
     if (result.matchedCount === 0) {
       res.json({

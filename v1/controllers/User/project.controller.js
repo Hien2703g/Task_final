@@ -5,6 +5,7 @@ const SearchHelper = require("../../../helpers/search");
 const User = require("../../../models/user.model");
 const Team = require("../../../models/team.model");
 const Notification = require("../../../models/notification.model");
+const { updateOverdueProjetcs } = require("../../../helpers/updateOverdue");
 //[GET]/api/v3/projects/:parentId/tasks
 module.exports.getTasksByParent = async (req, res) => {
   try {
@@ -86,6 +87,7 @@ module.exports.getTasksByParent = async (req, res) => {
 //[GET]/api/v1/projects
 module.exports.index = async (req, res) => {
   try {
+    await updateOverdueProjetcs();
     // CHỈ LẤY DỰ ÁN CHA - KHÔNG LẤY TASK
     const find = {
       $or: [{ createdBy: req.user.id }, { listUser: req.user.id }],
@@ -410,9 +412,9 @@ module.exports.changeStatus = async (req, res) => {
 module.exports.changeMulti = async (req, res) => {
   try {
     const { ids, key, value } = req.body;
-    console.log(ids);
-    console.log(key);
-    console.log(value);
+    // console.log(ids);
+    // console.log(key);
+    // console.log(value);
     switch (key) {
       case "status":
         await Project.updateMany(
