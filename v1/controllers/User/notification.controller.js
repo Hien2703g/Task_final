@@ -117,3 +117,33 @@ module.exports.delete = async (req, res) => {
     });
   }
 };
+
+//[PATCH]/api/v1/notificatons/allReaded
+module.exports.allReaded = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await Notification.updateMany(
+      {
+        user_id: userId,
+        deleted: false,
+        isRead: false,
+      },
+      {
+        $set: { isRead: true },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Đã đánh dấu tất cả thông báo của bạn thành đã đọc",
+      totalUpdated: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("allReaded error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+    });
+  }
+};

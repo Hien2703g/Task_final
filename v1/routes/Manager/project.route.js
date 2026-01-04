@@ -39,6 +39,8 @@ route.post("/comment/:id", controller.comment);
 
 route.patch("/comment/edit/:id", controller.editComment);
 
+route.patch("/comment/delete/:id", controller.deleteComment);
+
 route.patch("/priority/:id", controller.changePriority);
 
 module.exports = route;
