@@ -271,11 +271,3 @@ module.exports.editPatch = async (req, res) => {
     });
   }
 };
-
-// GET /api/v1/users/test-cookie
-exports.testCookie = (req, res) => {
-  res.json({
-    cookies: req.cookies,
-    user: req.user || null,
-  });
-};

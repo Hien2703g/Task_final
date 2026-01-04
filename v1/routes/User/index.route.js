@@ -8,6 +8,7 @@ const dashboardRoute = require("./dashboard.route");
 const teamRoute = require("./team.route");
 const postRoute = require("./post.route");
 const notificationRoute = require("./notification.route");
+const calendarRouter = require("./calendar.route");
 
 const authMiddleware = require("../../middlewares/User/auth.middlewares");
 const settingMiddleware = require("../../middlewares/User/setting.middleware");
@@ -33,6 +34,7 @@ module.exports = (app) => {
   app.use(version + "/diarys", authMiddleware.requireAuth, diaryRoute);
 
   // app.use(version + "/chat", authMiddleware.requireAuth, chatRoutes);
+  app.use(version + "/calendars", authMiddleware.requireAuth, calendarRouter);
 
   app.use(version + "/teams", authMiddleware.requireAuth, teamRoute);
 
