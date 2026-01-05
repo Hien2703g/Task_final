@@ -32,9 +32,7 @@ module.exports.history = async (req, res) => {
   try {
     const { teamId } = req.query;
     if (!teamId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "teamId is required" });
+      return res.status(400).json({ success: false, message: "teamId is required" });
     }
 
     const roomKey = `team_${teamId}`;

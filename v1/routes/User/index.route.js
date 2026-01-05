@@ -35,8 +35,6 @@ module.exports = (app) => {
 
   app.use(version + "/chat", authMiddleware.requireAuth, chatRoutes);
 
-  app.use(version + "/calendars", authMiddleware.requireAuth, calendarRouter);
-
   app.use(version + "/teams", authMiddleware.requireAuth, teamRoute);
 
   app.use(version + "/users", userRoute);
