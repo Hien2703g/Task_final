@@ -96,6 +96,9 @@ route(app);
 routeAdmin(app);
 routeManager(app);
 
+// ✅ THÊM DÒNG NÀY VÀO ĐÂY:
+require("./v1/Socket/chat.socket.js")(io); 
+
 // start
 server.listen(port, () => {
   console.log(`App listening on port ${port}`);
