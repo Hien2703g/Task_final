@@ -22,11 +22,7 @@ module.exports = (io) => {
   });
 
   io.on("connection", (socket) => {
-<<<<<<< HEAD
     console.log("socket connected:", socket.id, "user:", socket.user?._id);
-=======
-    console.log("✅ socket connected:", socket.id, "user:", socket.user?._id);
->>>>>>> ab211b5edee1c7e77a28548a2d867bf769c75e8a
 
     socket.on("JOIN_ROOM", ({ roomId }) => {
       if (!roomId) return;
@@ -37,20 +33,12 @@ module.exports = (io) => {
     socket.on("LEAVE_ROOM", ({ roomId }) => {
       if (!roomId) return;
       socket.leave(roomId);
-<<<<<<< HEAD
       console.log("LEAVE_ROOM:", roomId);
-=======
-      console.log("🚪 LEAVE_ROOM:", roomId);
->>>>>>> ab211b5edee1c7e77a28548a2d867bf769c75e8a
     });
 
     socket.on("CLIENT_SEND_MESSAGE", async (data) => {
       try {
-<<<<<<< HEAD
         console.log("CLIENT_SEND_MESSAGE:", data);
-=======
-        console.log("📩 CLIENT_SEND_MESSAGE:", data);
->>>>>>> ab211b5edee1c7e77a28548a2d867bf769c75e8a
 
         const userId = socket.user._id;
         const fullName = socket.user.fullName;
@@ -58,13 +46,9 @@ module.exports = (io) => {
         let images = [];
         if (Array.isArray(data.images) && data.images.length > 0) {
           for (const imageBuffer of data.images) {
-<<<<<<< HEAD
             const link = await uploadToCloudinary.uploadToCloudinary(
               imageBuffer
             );
-=======
-            const link = await uploadToCloudinary.uploadToCloudinary(imageBuffer);
->>>>>>> ab211b5edee1c7e77a28548a2d867bf769c75e8a
             images.push(link);
           }
         }
