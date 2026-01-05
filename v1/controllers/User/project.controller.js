@@ -158,25 +158,54 @@ module.exports.index = async (req, res) => {
 module.exports.detail = async (req, res) => {
   try {
     const id = req.params.id;
-    const findcomment = {
-      $or: [{ createdBy: req.user.id }, { listUser: req.user.id }],
-      deleted: false,
-      project_id: id,
-    };
-    const comment = await Comment.find(findcomment);
-    // console.log(comment);
+
+    // 1. Kiểm tra user có quyền xem project/task không
     const project = await Project.findOne({
       _id: id,
       deleted: false,
+      $or: [
+        { createdBy: req.user.id },
+        { listUser: req.user.id },
+        { manager: req.user.id },
+      ],
     });
+
+    if (!project) {
+      return res.status(403).json({
+        code: 403,
+        success: false,
+        message: "Bạn không có quyền xem dự án này",
+      });
+    }
+
+    // 2. Tìm comments của project/task này
+    const comments = await Comment.find({
+      project: id,
+      deleted: false,
+    })
+      .populate({
+        path: "user",
+        select: "fullName email avatar",
+      })
+      .sort({ position: 1, createdAt: 1 })
+      .lean();
+
     res.json({
       code: 200,
-      message: "success",
+      success: true,
+      message: "Lấy chi tiết dự án thành công",
       data: project,
-      comment: comment,
+      comments: comments,
+      totalComments: comments.length,
     });
   } catch (error) {
-    res.json("Khong tim thay");
+    console.error("ERROR in PROJECT DETAIL:", error);
+    res.status(500).json({
+      code: 500,
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
