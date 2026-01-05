@@ -54,13 +54,13 @@ module.exports = (io) => {
         }
         const teamId = data.teamId || data.room_chat_id;
         if (!mongoose.Types.ObjectId.isValid(teamId)) return;
-        // save DB
+        // ✅ save DB
         const doc = new Chat({
-          user_id: socket.user._id,
-          room_key: roomKey, //  bắt buộc
-          content: data.content || "",
-          images,
-          deleted: false,
+            user_id: socket.user._id,
+            room_key: roomKey, // ✅ bắt buộc
+            content: data.content || "",
+            images,
+            deleted: false,
         });
         await doc.save();
 
