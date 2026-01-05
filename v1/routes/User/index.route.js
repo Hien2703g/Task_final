@@ -32,7 +32,7 @@ module.exports = (app) => {
 
   app.use(version + "/diarys", authMiddleware.requireAuth, diaryRoute);
 
-  // app.use(version + "/chat", authMiddleware.requireAuth, chatRoutes);
+  app.use(version + "/chat", authMiddleware.requireAuth, chatRoutes);
 
   app.use(version + "/teams", authMiddleware.requireAuth, teamRoute);
 
