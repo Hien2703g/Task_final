@@ -35,13 +35,15 @@ module.exports.history = async (req, res) => {
       return res.status(400).json({ success: false, message: "teamId is required" });
     }
 
-    const roomKey = `team_${teamId}`;
+    // ✅ SỬA LẠI: Không dùng prefix "team_" vì trong database bạn lưu thẳng teamId
+    // Dựa trên ảnh 0afdc0.png, room_key của bạn đang là: "694d7b25245946a57bfa505f"
+    const roomKey = teamId; 
 
     const chats = await Chat.find({
       deleted: false,
       room_key: roomKey,
     })
-      .sort({ createdAt: 1 })
+      .sort({ createdAt: 1 }) // Sắp xếp từ cũ đến mới
       .lean();
 
     const userIds = [...new Set(chats.map((c) => String(c.user_id)))];
