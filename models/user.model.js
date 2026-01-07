@@ -59,6 +59,19 @@ const userSchema = new mongoose.Schema(
       account_id: String,
       deletedAt: Date,
     },
+    // THÊM vào userSchema (sau field "role"):
+    skills: {
+      type: String,
+      enum: ["beginner", "intermediate", "expert"],
+      default: "intermediate",
+    },
+
+    // THÊM để cache workload (tính toán sau):
+    currentTaskCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     updatedBy: [
       {
         account_id: String,
