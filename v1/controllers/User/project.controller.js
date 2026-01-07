@@ -6,6 +6,7 @@ const User = require("../../../models/user.model");
 const Team = require("../../../models/team.model");
 const Notification = require("../../../models/notification.model");
 const { updateOverdueProjetcs } = require("../../../helpers/updateOverdue");
+const mongoose = require("mongoose");
 //[GET]/api/v3/projects/:parentId/tasks
 module.exports.getTasksByParent = async (req, res) => {
   try {
@@ -409,199 +410,173 @@ module.exports.create = async (req, res) => {
     });
   }
 };
-//[POST]/api/v1/projects/create_hot
+
+// [POST] /api/v1/projects/create-hot
 module.exports.createHot = async (req, res) => {
   try {
     /* =========================
-       1. CHUẨN HÓA USER ID
+       1. USER INFO
     ========================== */
-    const userObjectId = new mongoose.Types.ObjectId(req.user.id);
-    req.body.createdBy = userObjectId;
-    req.body.statusHot = true; // ✅ boolean
-    const user = await User.findById(userObjectId).select("role");
+    const userId = req.user.id; // string
+    req.body.createdBy = userId;
+    req.body.statusHot = true;
 
+    const user = await User.findById(userId).select("role");
     if (!user) {
       return res.status(401).json({
-        code: 401,
         success: false,
         message: "User không tồn tại",
       });
     }
 
-    const isManager = user.role === "MANAGER";
-
-    if (!isManager) {
+    if (user.role !== "MANAGER") {
       return res.status(403).json({
-        code: 403,
         success: false,
         message: "Chỉ người quản lý mới được tạo công việc HOT",
       });
     }
 
     /* =========================
-       2. USER KHÔNG ĐƯỢC TẠO PROJECT CHA
+       2. KIỂM TRA PROJECT CHA
     ========================== */
     if (!req.body.projectParentId) {
       return res.status(403).json({
-        code: 403,
         success: false,
         message:
           "Bạn không có quyền tạo dự án mới. Chỉ được tạo công việc trong dự án hiện có.",
       });
     }
 
-    const parentProjectId = new mongoose.Types.ObjectId(
-      req.body.projectParentId
-    );
-
-    /* =========================
-       3. TÌM DỰ ÁN CHA
-    ========================== */
     const parentProject = await Project.findOne({
-      _id: parentProjectId,
+      _id: req.body.projectParentId,
       deleted: false,
     });
 
     if (!parentProject) {
       return res.status(404).json({
-        code: 404,
         success: false,
         message: "Không tìm thấy dự án cha",
       });
     }
 
     /* =========================
-       4. KIỂM TRA QUYỀN USER
+       3. CHECK QUYỀN TRONG DỰ ÁN CHA
     ========================== */
-    const isCreator = parentProject.createdBy.equals(userObjectId);
+    const isCreator = parentProject.createdBy?.toString() === userId;
+
+    const isManager = parentProject.manager?.toString() === userId;
+
     const isMember =
       Array.isArray(parentProject.listUser) &&
-      parentProject.listUser.some((uid) => uid.equals(userObjectId));
+      parentProject.listUser.some((uid) => uid.toString() === userId);
 
-    if (!isCreator && !isMember) {
+    if (!isCreator && !isManager && !isMember) {
       return res.status(403).json({
-        code: 403,
         success: false,
-        message:
-          "Bạn không phải thành viên của dự án này. Không thể tạo công việc.",
+        message: "Bạn không có quyền tạo công việc trong dự án này",
       });
     }
 
     /* =========================
-       5. GÁN MANAGER
+       4. GÁN MANAGER
     ========================== */
     req.body.manager = parentProject.manager || parentProject.createdBy;
 
     /* =========================
-       6. CHUẨN HÓA listUser
+       5. CHUẨN HÓA listUser
     ========================== */
-    const normalizeUserIds = (ids = []) =>
-      ids.map((id) => new mongoose.Types.ObjectId(id));
-
-    const inputListUser = Array.isArray(req.body.listUser)
-      ? normalizeUserIds(req.body.listUser)
+    const listUser = Array.isArray(req.body.listUser)
+      ? req.body.listUser
       : req.body.listUser
-      ? [new mongoose.Types.ObjectId(req.body.listUser)]
+      ? [req.body.listUser]
       : [];
 
     /* =========================
-       7. ASSIGNEE MẶC ĐỊNH
+       6. ASSIGNEE MẶC ĐỊNH
     ========================== */
-    if (!req.body.assignee_id) {
-      req.body.assignee_id = userObjectId;
-    } else {
-      req.body.assignee_id = new mongoose.Types.ObjectId(req.body.assignee_id);
-    }
+    req.body.assignee_id = req.body.assignee_id || userId;
 
     /* =========================
-       8. TẠO TASK
+       7. TẠO TASK HOT
     ========================== */
     const newTask = new Project({
       ...req.body,
-      listUser: inputListUser,
+      listUser,
     });
 
     const savedTask = await newTask.save();
 
     /* =========================
-       9. TẠO DANH SÁCH USER DUY NHẤT
+       8. LIST USER DUY NHẤT
     ========================== */
-    const uniqueListUser = [
+    const uniqueUserIds = [
       ...new Set(
-        [
-          ...inputListUser,
-          userObjectId,
-          new mongoose.Types.ObjectId(savedTask.manager),
-        ].map((id) => id.toString())
+        [...listUser, userId, savedTask.manager].map((id) => id.toString())
       ),
-    ].map((id) => new mongoose.Types.ObjectId(id));
+    ];
 
     /* =========================
-       10. TẠO TEAM
+       9. TẠO TEAM
     ========================== */
     const team = new Team({
       project_id: savedTask._id,
       name: savedTask.title,
-      leader: userObjectId,
+      leader: userId,
       description: savedTask.content,
-      listUser: uniqueListUser,
+      listUser: uniqueUserIds,
       manager: savedTask.manager,
     });
 
     await team.save();
 
     /* =========================
-       11. TẠO THÔNG BÁO
+       10. TẠO THÔNG BÁO
     ========================== */
-    const usersToNotify = uniqueListUser.filter(
-      (uid) => !uid.equals(userObjectId)
-    );
+    const usersToNotify = uniqueUserIds.filter((uid) => uid !== userId);
 
-    if (usersToNotify.length > 0) {
+    if (usersToNotify.length) {
       const notifications = usersToNotify.map((uid) => ({
         user_id: uid,
-        sender: userObjectId,
+        sender: userId,
         type: "CREATE_PROJECT",
-        title:
-          "Bạn được tham gia vào dự án khẩn cấp mới, hãy vào xác nhận thông tin",
+        title: "Bạn được tham gia vào dự án khẩn cấp mới",
         message: `Project: ${savedTask.title}`,
         url: `/projects/detail/${savedTask._id}`,
-        priority: savedTask.priority,
+        priority: savedTask.priority || "HIGH",
       }));
 
       await Notification.insertMany(notifications);
     }
 
     /* =========================
-       12. RESPONSE
+       11. RESPONSE
     ========================== */
     return res.status(200).json({
-      code: 200,
       success: true,
-      message: "Tạo công việc thành công",
+      message: "Tạo công việc HOT thành công",
       data: savedTask,
       team,
     });
   } catch (error) {
-    console.error("❌ LỖI KHI TẠO TASK:", error);
+    console.error("❌ CREATE HOT ERROR:", error);
     return res.status(500).json({
-      code: 500,
       success: false,
-      message: "Lỗi server: " + error.message,
+      message: error.message || "Lỗi server",
     });
   }
 };
-//[PATCH]/api/v1/projects//refuse/:id
+
+// [PATCH] /api/v1/projects/refuse/:id
 module.exports.refuseProject = async (req, res) => {
   try {
     /* =========================
-       1. CHUẨN HÓA ID
+       1. USER & PROJECT ID
     ========================== */
-    const userObjectId = new mongoose.Types.ObjectId(req.user.id);
-    const projectId = new mongoose.Types.ObjectId(req.params.id);
+    const userId = req.user.id; // string
+    const projectId = req.params.id;
 
     /* =========================
-       2. TÌM PROJECT
+       2. FIND PROJECT
     ========================== */
     const project = await Project.findOne({
       _id: projectId,
@@ -610,63 +585,61 @@ module.exports.refuseProject = async (req, res) => {
 
     if (!project) {
       return res.status(404).json({
-        code: 404,
         success: false,
         message: "Không tìm thấy dự án",
       });
     }
 
     /* =========================
-       3. KHÔNG CHO CREATOR / MANAGER TỪ CHỐI
+       3. CREATOR / MANAGER KHÔNG ĐƯỢC TỪ CHỐI
     ========================== */
-    if (
-      project.createdBy.equals(userObjectId) ||
-      (project.manager && project.manager.equals(userObjectId))
-    ) {
+    const isCreator = project.createdBy?.toString() === userId;
+
+    const isManager = project.manager?.toString() === userId;
+
+    if (isCreator || isManager) {
       return res.status(403).json({
-        code: 403,
         success: false,
         message: "Bạn không thể từ chối dự án do mình quản lý",
       });
     }
 
     /* =========================
-       4. KIỂM TRA USER CÓ TRONG DỰ ÁN KHÔNG
+       4. KIỂM TRA THÀNH VIÊN
     ========================== */
     const isMember =
       Array.isArray(project.listUser) &&
-      project.listUser.some((uid) => uid.equals(userObjectId));
+      project.listUser.some((uid) => uid.toString() === userId);
 
     if (!isMember) {
       return res.status(400).json({
-        code: 400,
         success: false,
         message: "Bạn không thuộc dự án này",
       });
     }
 
     /* =========================
-       5. REMOVE USER KHỎI listUser
+       5. REMOVE USER KHỎI PROJECT
     ========================== */
     await Project.updateOne(
       { _id: projectId },
-      { $pull: { listUser: userObjectId } }
+      { $pull: { listUser: userId } }
     );
 
     /* =========================
-       6. (OPTIONAL) TẠO THÔNG BÁO CHO MANAGER
+       6. TẠO THÔNG BÁO CHO MANAGER
     ========================== */
     if (project.manager) {
       await Notification.create({
         user_id: project.manager,
-        sender: userObjectId,
+        sender: userId,
         type: "REFUSE_PROJECT",
         title: "Thành viên từ chối tham gia dự án",
         message: `${req.user.fullName || "Một thành viên"} đã từ chối dự án "${
           project.title
         }"`,
         url: `/projects/detail/${project._id}`,
-        priority: project.priority,
+        priority: project.priority || "MEDIUM",
       });
     }
 
@@ -674,20 +647,17 @@ module.exports.refuseProject = async (req, res) => {
        7. RESPONSE
     ========================== */
     return res.status(200).json({
-      code: 200,
       success: true,
       message: "Từ chối tham gia dự án thành công",
     });
   } catch (error) {
-    console.error("❌ LỖI refuseProject:", error);
+    console.error("❌ refuseProject ERROR:", error);
     return res.status(500).json({
-      code: 500,
       success: false,
-      message: "Lỗi server: " + error.message,
+      message: error.message || "Lỗi server",
     });
   }
 };
-
 // [PATCH] /api/v1/projects/edit/:id
 module.exports.edit = async (req, res) => {
   try {
