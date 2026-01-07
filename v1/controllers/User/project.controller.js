@@ -418,6 +418,25 @@ module.exports.createHot = async (req, res) => {
     const userObjectId = new mongoose.Types.ObjectId(req.user.id);
     req.body.createdBy = userObjectId;
     req.body.statusHot = true; // ✅ boolean
+    const user = await User.findById(userObjectId).select("role");
+
+    if (!user) {
+      return res.status(401).json({
+        code: 401,
+        success: false,
+        message: "User không tồn tại",
+      });
+    }
+
+    const isManager = user.role === "MANAGER";
+
+    if (!isManager) {
+      return res.status(403).json({
+        code: 403,
+        success: false,
+        message: "Chỉ người quản lý mới được tạo công việc HOT",
+      });
+    }
 
     /* =========================
        2. USER KHÔNG ĐƯỢC TẠO PROJECT CHA
