@@ -737,6 +737,75 @@ module.exports.edit = async (req, res) => {
   }
 };
 
+//[PATCH]/api/v1/projects/edit_hot/:id
+module.exports.editHot = async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const userId = req.user._id;
+
+    const project = await Project.findOne({
+      _id: projectId,
+      deleted: false,
+      statusHot: true,
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy dự án",
+      });
+    }
+
+    if (project.createdBy.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không phải người tạo dự án",
+      });
+    }
+
+    await Project.updateOne({ _id: projectId }, req.body);
+
+    const updatedProject = await Project.findById(projectId);
+
+    // Tạo Thông báo
+    // lấy danh sách user nhận thông báo
+    const uniqueListUser = [
+      ...(updatedProject.listUser || []),
+      updatedProject.manager,
+    ].filter(Boolean);
+
+    const usersToNotify = uniqueListUser.filter(
+      (uid) => uid.toString() !== userId.toString()
+    );
+
+    const notifications = usersToNotify.map((uid) => ({
+      user_id: uid,
+      sender: userId,
+      type: "PROJECT",
+      title: "Dự án khẩn cấp vừa được cập nhật",
+      message: `Project: ${updatedProject.title}`,
+      url: `/projects/${updatedProject._id}`,
+      priority: updatedProject.priority || "MEDIUM",
+    }));
+
+    if (notifications.length) {
+      await Notification.insertMany(notifications);
+    }
+
+    return res.json({
+      success: true,
+      message: "Cập nhật dự án thành công",
+      data: updatedProject,
+    });
+  } catch (error) {
+    console.error("EDIT PROJECT ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 //[PATCH] /api/v1/projects/change-status/:id
 module.exports.changeStatus = async (req, res) => {
   try {

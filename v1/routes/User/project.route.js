@@ -30,6 +30,12 @@ route.post(
   uploadCloudinary.upload,
   controller.createHot
 );
+route.patch(
+  "/edit_hot/:id",
+  upload.single("thumbnail"),
+  uploadCloudinary.upload,
+  controller.editHot
+);
 
 route.patch(
   "/edit/:id",
