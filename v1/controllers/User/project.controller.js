@@ -688,12 +688,13 @@ module.exports.refuseProject = async (req, res) => {
   }
 };
 
-//[PATCH]/api/v1/projects/edit/:id
+// [PATCH] /api/v1/projects/edit/:id
 module.exports.edit = async (req, res) => {
   try {
     const projectId = req.params.id;
-    const userId = req.user._id;
+    const userId = req.user._id.toString();
 
+    /* ================== FIND PROJECT ================== */
     const project = await Project.findOne({
       _id: projectId,
       deleted: false,
@@ -706,26 +707,32 @@ module.exports.edit = async (req, res) => {
       });
     }
 
-    if (project.createdBy.toString() !== userId.toString()) {
+    /* ================== CHECK PERMISSION ================== */
+    const isCreator =
+      project.createdBy && project.createdBy.toString() === userId;
+
+    const isManager = project.manager && project.manager.toString() === userId;
+
+    if (!isCreator && !isManager) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không phải người tạo dự án",
+        message: "Bạn không có quyền chỉnh sửa dự án này",
       });
     }
 
+    /* ================== UPDATE PROJECT ================== */
     await Project.updateOne({ _id: projectId }, req.body);
 
     const updatedProject = await Project.findById(projectId);
 
-    // Tạo Thông báo
-    // lấy danh sách user nhận thông báo
+    /* ================== CREATE NOTIFICATION ================== */
     const uniqueListUser = [
       ...(updatedProject.listUser || []),
       updatedProject.manager,
     ].filter(Boolean);
 
     const usersToNotify = uniqueListUser.filter(
-      (uid) => uid.toString() !== userId.toString()
+      (uid) => uid.toString() !== userId
     );
 
     const notifications = usersToNotify.map((uid) => ({
@@ -738,10 +745,11 @@ module.exports.edit = async (req, res) => {
       priority: updatedProject.priority || "MEDIUM",
     }));
 
-    if (notifications.length) {
+    if (notifications.length > 0) {
       await Notification.insertMany(notifications);
     }
 
+    /* ================== RESPONSE ================== */
     return res.json({
       success: true,
       message: "Cập nhật dự án thành công",
@@ -751,7 +759,7 @@ module.exports.edit = async (req, res) => {
     console.error("EDIT PROJECT ERROR:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Lỗi cập nhật dự án",
     });
   }
 };
@@ -927,10 +935,16 @@ module.exports.delete = async (req, res) => {
       });
     }
 
-    if (project.createdBy.toString() !== userId.toString()) {
+    /* ================== CHECK PERMISSION ================== */
+    const isCreator =
+      project.createdBy && project.createdBy.toString() === userId;
+
+    const isManager = project.manager && project.manager.toString() === userId;
+
+    if (!isCreator && !isManager) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không phải người tạo dự án",
+        message: "Bạn không có quyền chỉnh sửa dự án này",
       });
     }
 

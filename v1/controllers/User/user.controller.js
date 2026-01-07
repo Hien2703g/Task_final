@@ -45,9 +45,15 @@ module.exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email, deleted: false });
+    const user = await User.findOne({
+      email,
+      deleted: false,
+      status: "active",
+    });
     if (!user) {
-      return res.status(400).json({ message: "Email không tồn tại" });
+      return res
+        .status(400)
+        .json({ message: "Email không tồn tại hoặc bạn đã bị khoá tài khoản" });
     }
 
     if (md5(password) !== user.password) {
