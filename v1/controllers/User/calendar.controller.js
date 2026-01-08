@@ -402,6 +402,7 @@ module.exports.index = async (req, res) => {
     }
     //end sort
     const data = await Calendar.find(find)
+      .sort({ createdAt: -1 }) // mới nhất trước
       .sort(sort)
       .limit(objectPagination.limitItem)
       .skip(objectPagination.skip);
