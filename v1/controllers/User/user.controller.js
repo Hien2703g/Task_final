@@ -217,6 +217,7 @@ module.exports.detail = async (req, res) => {
 module.exports.listuser = async (req, res) => {
   const users = await User.find({
     deleted: false,
+    status: "active",
   }).select("-password -token");
   res.json({
     code: 200,
