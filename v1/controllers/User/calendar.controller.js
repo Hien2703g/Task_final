@@ -40,6 +40,101 @@ module.exports.create = async (req, res) => {
       });
     }
 
+    // 👇 THÊM: KIỂM TRA TRÙNG LỊCH CHO CẢ NGƯỜI TẠO VÀ THÀNH VIÊN THAM GIA
+    // Tạo mảng user IDs cần check (bao gồm cả người tạo và thành viên)
+    const usersToCheck = [req.user.id];
+    if (Array.isArray(listUser)) {
+      listUser.forEach((userId) => {
+        if (userId && !usersToCheck.includes(userId.toString())) {
+          usersToCheck.push(userId.toString());
+        }
+      });
+    }
+
+    // Tìm tất cả sự kiện conflict với bất kỳ user nào trong danh sách
+    const existingEvents = await Calendar.find({
+      deleted: false,
+      $or: [
+        // Sự kiện mà user này là người tạo
+        { createdBy: { $in: usersToCheck } },
+        // Sự kiện mà user này là thành viên tham gia
+        { listUser: { $in: usersToCheck } },
+      ],
+      $and: [
+        // Check time overlap
+        {
+          $or: [
+            // Case 1: Sự kiện mới nằm HOÀN TOÀN trong sự kiện cũ
+            {
+              timeStart: { $lte: new Date(timeStart) },
+              timeFinish: { $gte: new Date(timeFinish) },
+            },
+            // Case 2: Sự kiện mới bắt đầu trong sự kiện cũ
+            {
+              timeStart: { $lt: new Date(timeFinish) },
+              timeFinish: { $gt: new Date(timeStart) },
+            },
+            // Case 3: Sự kiện mới chứa sự kiện cũ
+            {
+              timeStart: { $gte: new Date(timeStart) },
+              timeFinish: { $lte: new Date(timeFinish) },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (existingEvents.length > 0) {
+      const conflictEvent = existingEvents[0];
+      const conflictStart = new Date(conflictEvent.timeStart).toLocaleString(
+        "vi-VN"
+      );
+      const conflictEnd = new Date(conflictEvent.timeFinish).toLocaleString(
+        "vi-VN"
+      );
+
+      // Xác định user bị conflict
+      let conflictUserMessage = "bạn";
+      if (conflictEvent.createdBy.toString() === req.user.id.toString()) {
+        conflictUserMessage = "bạn (người tạo)";
+      } else if (conflictEvent.listUser.includes(req.user.id)) {
+        conflictUserMessage = "bạn (thành viên tham gia)";
+      }
+
+      // Check nếu conflict với thành viên khác
+      const conflictWithOtherUsers = [];
+      usersToCheck.forEach((userId) => {
+        if (userId !== req.user.id.toString()) {
+          if (
+            conflictEvent.createdBy.toString() === userId ||
+            conflictEvent.listUser.includes(userId)
+          ) {
+            conflictWithOtherUsers.push(userId);
+          }
+        }
+      });
+
+      let message = `Bạn không thể tạo sự kiện này vì ${conflictUserMessage} đã có sự kiện "${conflictEvent.title}" trong khoảng thời gian này (${conflictStart} - ${conflictEnd})`;
+
+      if (conflictWithOtherUsers.length > 0) {
+        message += `\nVà thành viên tham gia cũng đã có sự kiện khác trùng giờ`;
+      }
+
+      return res.status(400).json({
+        code: 400,
+        message: message,
+        data: {
+          conflictId: conflictEvent._id,
+          conflictTitle: conflictEvent.title,
+          conflictTime: {
+            start: conflictEvent.timeStart,
+            end: conflictEvent.timeFinish,
+          },
+          conflictWithUsers: conflictWithOtherUsers,
+        },
+      });
+    }
+
     const calendar = new Calendar({
       title,
       description,
@@ -116,6 +211,117 @@ module.exports.edit = async (req, res) => {
         code: 400,
         message: "Không có dữ liệu để cập nhật",
       });
+    }
+
+    // 👇 THÊM: KIỂM TRA TRÙNG LỊCH KHI EDIT (cho cả người tạo và thành viên)
+    if (updateData.timeStart || updateData.timeFinish || updateData.listUser) {
+      // Lấy thông tin sự kiện hiện tại để so sánh
+      const currentEvent = await Calendar.findById(id);
+      if (!currentEvent) {
+        return res.status(404).json({
+          code: 404,
+          message: "Không tìm thấy sự kiện",
+        });
+      }
+
+      // Tạo mảng user IDs cần check
+      const usersToCheck = [req.user.id];
+      const newListUser = updateData.listUser || currentEvent.listUser;
+
+      if (Array.isArray(newListUser)) {
+        newListUser.forEach((userId) => {
+          if (userId && !usersToCheck.includes(userId.toString())) {
+            usersToCheck.push(userId.toString());
+          }
+        });
+      }
+
+      const timeStart = updateData.timeStart || currentEvent.timeStart;
+      const timeFinish = updateData.timeFinish || currentEvent.timeFinish;
+
+      // Tìm sự kiện conflict (trừ chính sự kiện đang edit)
+      const existingEvents = await Calendar.find({
+        _id: { $ne: id },
+        deleted: false,
+        $or: [
+          { createdBy: { $in: usersToCheck } },
+          { listUser: { $in: usersToCheck } },
+        ],
+        $and: [
+          {
+            $or: [
+              {
+                timeStart: { $lte: new Date(timeStart) },
+                timeFinish: { $gte: new Date(timeFinish) },
+              },
+              {
+                timeStart: { $lt: new Date(timeFinish) },
+                timeFinish: { $gt: new Date(timeStart) },
+              },
+              {
+                timeStart: { $gte: new Date(timeStart) },
+                timeFinish: { $lte: new Date(timeFinish) },
+              },
+            ],
+          },
+        ],
+      });
+
+      if (existingEvents.length > 0) {
+        const conflictEvent = existingEvents[0];
+        const conflictStart = new Date(conflictEvent.timeStart).toLocaleString(
+          "vi-VN"
+        );
+        const conflictEnd = new Date(conflictEvent.timeFinish).toLocaleString(
+          "vi-VN"
+        );
+
+        // Xác định loại conflict
+        let conflictType = "";
+        const conflictForCreator =
+          conflictEvent.createdBy.toString() === req.user.id.toString();
+        const conflictForParticipant = conflictEvent.listUser.includes(
+          req.user.id
+        );
+
+        if (conflictForCreator) {
+          conflictType = "bạn (người tạo)";
+        } else if (conflictForParticipant) {
+          conflictType = "bạn (thành viên tham gia)";
+        }
+
+        // Check conflict với thành viên khác
+        const conflictWithOtherUsers = [];
+        usersToCheck.forEach((userId) => {
+          if (userId !== req.user.id.toString()) {
+            if (
+              conflictEvent.createdBy.toString() === userId ||
+              conflictEvent.listUser.includes(userId)
+            ) {
+              conflictWithOtherUsers.push(userId);
+            }
+          }
+        });
+
+        let message = `Không thể cập nhật vì ${conflictType} đã có sự kiện "${conflictEvent.title}" trong khoảng thời gian này (${conflictStart} - ${conflictEnd})`;
+
+        if (conflictWithOtherUsers.length > 0) {
+          message += `\nVà thành viên tham gia cũng đã có sự kiện khác trùng giờ`;
+        }
+
+        return res.status(400).json({
+          code: 400,
+          message: message,
+          data: {
+            conflictId: conflictEvent._id,
+            conflictTitle: conflictEvent.title,
+            conflictTime: {
+              start: conflictEvent.timeStart,
+              end: conflictEvent.timeFinish,
+            },
+          },
+        });
+      }
     }
 
     //Update + check quyền
